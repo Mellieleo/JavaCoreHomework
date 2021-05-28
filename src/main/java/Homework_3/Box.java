@@ -3,16 +3,18 @@ package Homework_3;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class Box<T extends Fruit> {
-    private T[] fruitInside;
+    private ArrayList<T> fruitInside;
 
+    @SafeVarargs
     public Box(T... fruitInside) {
-        this.fruitInside = fruitInside;
+        this.fruitInside = new ArrayList<>(Arrays.asList(fruitInside));
     }
 
     public void addNew(T newFruit) {
-        Arrays.stream(fruitInside).toList().add(newFruit);
+        fruitInside.add(newFruit);
     }
 
 
@@ -32,6 +34,6 @@ public class Box<T extends Fruit> {
         for (T fruit:fruitInside) {
             otherBox.addNew(fruit);
         }
-        Arrays.stream(fruitInside).toList().clear();
+        fruitInside.clear();
     }
 }

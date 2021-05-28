@@ -37,6 +37,8 @@ public class Main {
 
         Box<Orange> otherOrangeBox = new Box<>();
         orangeBox.moveTo(otherOrangeBox);
+        System.out.println(orangeBox.getWeight());
+        System.out.println(otherOrangeBox.getWeight());
     }
 
 
