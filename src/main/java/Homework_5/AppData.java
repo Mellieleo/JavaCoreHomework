@@ -29,6 +29,8 @@ public class AppData {
 
     @Override
     public String toString() {
-        return Arrays.toString(header) + ", " + Arrays.toString(data);
+        return "header=" + Arrays.toString(header) +
+                ", data=" + Arrays.deepToString(data) +
+                '}';
     }
 }
