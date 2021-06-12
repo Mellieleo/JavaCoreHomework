@@ -1,6 +1,8 @@
 package Homework_7.Model;
 
 import Homework_7.GlobalState;
+import Homework_7.entity.WeatherObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
@@ -8,6 +10,8 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AccuWeatherProvider implements IWeatherProvider {
 
@@ -18,24 +22,23 @@ public class AccuWeatherProvider implements IWeatherProvider {
     public static final String FREQUENCY = "daily";
     public static final String DAY1 = "1day";
     public static final String DAY5 = "5day";
+    public static final String LOCATION = "locations";
+    public static final String CITY = "cities";
+    public static final String SEARCH = "search";
 
     private final OkHttpClient client = new OkHttpClient();
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
-    public void getWeather(Period period) {
+    public List<WeatherObject> getWeather(Period period) {
         String key = detectCityKeyByName();
+        List<WeatherObject> weather = new ArrayList<>();
         if (period.equals(Period.NOW)) {
             Request reqOneDay = reqConstructor(urlConstructor(key, DAY1));
             try {
-                    Response response = client.newCall(reqOneDay).execute();
-                    String jsResponse = response.body().string();
-                    String date = mapper.readTree(jsResponse).at("/DailyForecasts/0/Date").asText();
-                    String weatherTextDay = mapper.readTree(jsResponse).at("/DailyForecasts/0/Day/IconPhrase").asText();
-                    String weatherTextNight = mapper.readTree(jsResponse).at("/DailyForecasts/0/Night/IconPhrase").asText();
-                    String tempDay = mapper.readTree(jsResponse).at("/DailyForecasts/0/Temperature/Maximum/Value").asText();
-                    String tempNight = mapper.readTree(jsResponse).at("/DailyForecasts/0/Temperature/Minimum/Value").asText();
-                    System.out.printf("Дата %s: Днем %s, %s; Ночью %s, %s\n", date, weatherTextDay, tempDay, weatherTextNight, tempNight);
+                Response response = client.newCall(reqOneDay).execute();
+                String jsResponse = response.body().string();
+                weather = jsonReader(1, jsResponse);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -44,24 +47,32 @@ public class AccuWeatherProvider implements IWeatherProvider {
             try {
                 Response response = client.newCall(reqFiveDays).execute();
                 String jsResponse = response.body().string();
-                String folder = "/DailyForecasts/";
-                for (int i = 0; i < 5; i++) {
-                    String date = mapper.readTree(jsResponse).at(folder + i + "/Date").asText();
-                    String weatherTextDay = mapper.readTree(jsResponse).at(folder + i + "/Day/IconPhrase").asText();
-                    String weatherTextNight = mapper.readTree(jsResponse).at(folder + i + "/Night/IconPhrase").asText();
-                    String tempDay = mapper.readTree(jsResponse).at(folder + i + "/Temperature/Maximum/Value").asText();
-                    String tempNight = mapper.readTree(jsResponse).at(folder + i + "/Temperature/Minimum/Value").asText();
-                    System.out.printf("Дата %s: Днем %s, %s; Ночью %s, %s\n", date, weatherTextDay, tempDay, weatherTextNight, tempNight);
-                }
+                weather = jsonReader(5, jsResponse);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
 
+        return weather;
     }
 
+    private List<WeatherObject> jsonReader(int daysNum, String jsResponse) throws JsonProcessingException {
+        List<WeatherObject> weather = new ArrayList<>();
+        String folder = "/DailyForecasts/";
+        for (int i = 0; i < daysNum; i++) {
+            String date = mapper.readTree(jsResponse).at(folder + i + "/Date").asText();
+            String weatherTextDay = mapper.readTree(jsResponse).at(folder + i + "/Day/IconPhrase").asText();
+            String weatherTextNight = mapper.readTree(jsResponse).at(folder + i + "/Night/IconPhrase").asText();
+            String tempDay = mapper.readTree(jsResponse).at(folder + i + "/Temperature/Maximum/Value").asText();
+            String tempNight = mapper.readTree(jsResponse).at(folder + i + "/Temperature/Minimum/Value").asText();
+            WeatherObject weatherObject = new WeatherObject(GlobalState.getInstance().getSelectedCity(), date, weatherTextDay, tempDay, weatherTextNight, tempNight);
+            weather.add(weatherObject);
+            System.out.printf("Дата %s: Днем %s, %s; Ночью %s, %s\n", date, weatherTextDay, tempDay, weatherTextNight, tempNight);
+        }
+        return weather;
+    }
 
-    private HttpUrl urlConstructor (String city, String duration) {
+    private HttpUrl urlConstructor(String city, String duration) {
         HttpUrl url = new HttpUrl.Builder()
                 .scheme(SCHEME)
                 .host(BASE_HOST)
@@ -77,7 +88,7 @@ public class AccuWeatherProvider implements IWeatherProvider {
         return url;
     }
 
-    private Request reqConstructor (HttpUrl url) {
+    private Request reqConstructor(HttpUrl url) {
         Request request = new Request.Builder()
                 .addHeader("accept", "application/json")
                 .url(url)
@@ -91,17 +102,17 @@ public class AccuWeatherProvider implements IWeatherProvider {
         HttpUrl detectLocationURL = new HttpUrl.Builder()
                 .scheme(SCHEME)
                 .host(BASE_HOST)
-                .addPathSegment("locations")
+                .addPathSegment(LOCATION)
                 .addPathSegment(VERSION)
-                .addPathSegment("cities")
-                .addPathSegment("search")
+                .addPathSegment(CITY)
+                .addPathSegment(SEARCH)
                 .addQueryParameter("apikey", GlobalState.getInstance().API_KEY)
                 .addQueryParameter("q", selectedCity)
                 .build();
 
         Request request = reqConstructor(detectLocationURL);
 
-        Response locationResponse = null;
+        Response locationResponse;
         try {
             locationResponse = client.newCall(request).execute();
 

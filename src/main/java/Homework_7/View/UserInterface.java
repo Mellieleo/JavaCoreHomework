@@ -17,7 +17,7 @@ public class UserInterface implements IUserInterface{
             String userInput = in.nextLine();
             checkIfExit(userInput);
             GlobalState.getInstance().setSelectedCity(userInput);
-            System.out.println("Введите команду: \n1. - погода на 1 день\n2. - погода на 5 дней");
+            System.out.println("Введите команду: \n1. - погода на 1 день\n2. - погода на 5 дней\n3. - сохраненная информация из локальной базы данных");
             String command = in.nextLine();
 
             try {
